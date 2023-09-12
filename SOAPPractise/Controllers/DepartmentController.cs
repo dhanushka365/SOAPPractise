@@ -6,6 +6,9 @@ using SOAPPractise.Model.DTO;
 using SOAPPractise.Model.Repositories;
 using SOAPPractise.Model;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
+using System.Xml.Serialization;
+using System.Xml;
 
 namespace SOAPPractise.Controllers
 {
@@ -17,6 +20,24 @@ namespace SOAPPractise.Controllers
         private readonly IDepartmentRepository _departmentRepository;
         private readonly IMapper _mapper;
 
+        private string GenerateSoapResponse(int result)
+        {
+            // Create a StringBuilder to build the SOAP response
+            StringBuilder soapResponse = new StringBuilder();
+
+            // Append the SOAP envelope, header, and body
+            soapResponse.AppendLine("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
+            soapResponse.AppendLine("<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\">");
+            soapResponse.AppendLine("<soap:Header/>");
+            soapResponse.AppendLine("<soap:Body>");
+            soapResponse.AppendLine($"<CalculateResponse xmlns=\"http://tempuri.org/\">");
+            soapResponse.AppendLine($"<CalculateResult>{result}</CalculateResult>");
+            soapResponse.AppendLine("</CalculateResponse>");
+            soapResponse.AppendLine("</soap:Body>");
+            soapResponse.AppendLine("</soap:Envelope>");
+
+            return soapResponse.ToString();
+        }
         public DepartmentController(ERPContext dbContext, IMapper mapper, IDepartmentRepository departmentRepository)
         {
             _dbContext = dbContext;
@@ -24,38 +45,56 @@ namespace SOAPPractise.Controllers
             _departmentRepository = departmentRepository;
         }
 
+        //[HttpGet]
+        //public async Task<IActionResult> GetAll()
+        //{
+        //    // Use Entity Framework Core to retrieve departments from the database
+        //    var departments = await _dbContext.Departments.ToListAsync();
+
+        //    // Use the department repository to retrieve additional department data
+        //    var departmentDomainModels = await _departmentRepository.GetAllAsync();
+
+        //    // Map the department data to DTOs using AutoMapper
+        //    var departmentDtos = _mapper.Map<List<DepartmentDto>>(departmentDomainModels);
+
+        //    // Combine the data from both sources if needed
+
+        //    // Return the result as an OK response
+        //    return Ok(departmentDtos);
+        //}
+
         [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            // Use Entity Framework Core to retrieve departments from the database
-            var departments = await _dbContext.Departments.ToListAsync();
-
-            // Use the department repository to retrieve additional department data
-            var departmentDomainModels = await _departmentRepository.GetAllAsync();
-
-            // Map the department data to DTOs using AutoMapper
-            var departmentDtos = _mapper.Map<List<DepartmentDto>>(departmentDomainModels);
-
-            // Combine the data from both sources if needed
-
-            // Return the result as an OK response
-            return Ok(departmentDtos);
-        }
-
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetById([FromBody] DeleteDepartmentRequestDto deleteDepartmentRequestDto)
         {
             try
             {
                 // Use Entity Framework Core to retrieve a department by its ID
-                var department = await _dbContext.Departments.FirstOrDefaultAsync(d => d.Id == id);
+                var department = await _dbContext.Departments.FirstOrDefaultAsync(d => d.Id ==  Guid.Parse(" deleteDepartmentRequestDto.id"));
 
                 if (department == null)
                 {
                     return NotFound(); // Department not found
                 }
+                // Create a SOAP envelope
+                var soapEnvelope = new
+                {
+                    Body = new
+                    {
+                        Department = department
+                    }
+                };
+                // Serialize the SOAP envelope to XML
+                var xmlSerializer = new XmlSerializer(typeof(object));
+                var stringWriter = new StringWriter();
+                using (var xmlWriter = XmlWriter.Create(stringWriter, new XmlWriterSettings { OmitXmlDeclaration = false }))
+                {
+                    xmlSerializer.Serialize(xmlWriter, soapEnvelope);
+                }
 
-                return Ok(department); // Department found and returned
+                string soapResponse = stringWriter.ToString();
+
+                return Ok(soapResponse); // Department found
+
             }
             catch (Exception ex)
             {
@@ -101,12 +140,13 @@ namespace SOAPPractise.Controllers
             return Ok(updatedDepartmentDto);
         }
 
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteDepartment(Guid id)
+        [HttpDelete]
+        public async Task<ActionResult> DeleteDepartment([FromBody] DeleteDepartmentRequestDto deleteDepartmentRequestDto)
         {
             try
             {
-                var department = await _departmentRepository.DeleteAsync(id);
+                System.Diagnostics.Debug.WriteLine($"Received GUID: {deleteDepartmentRequestDto.Id}");
+                var department = await _departmentRepository.DeleteAsync(Guid.Parse(deleteDepartmentRequestDto.Id));
 
                 if (department == null)
                 {

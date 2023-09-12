@@ -29,10 +29,10 @@ options.UseSqlServer(builder.Configuration.GetConnectionString("EmpConnectionStr
 builder.Services.AddScoped<IDepartmentRepository, SQLDepartmentRepository>();
 //------------------------------------------------------------------------------------------------------
 //Configure Services
-builder.Services.AddControllers(options =>
-{
-    options.InputFormatters.Insert(0, new XmlSerializerInputFormatter(new MvcOptions()));
-});
+//builder.Services.AddControllers(options =>
+//{
+//    options.InputFormatters.Insert(0, new XmlSerializerInputFormatter(new MvcOptions()));
+//});
 //------------------------------------------------------------------------------------------------------
 //builder.Services.AddControllers();
 builder.Services.AddControllers(options =>

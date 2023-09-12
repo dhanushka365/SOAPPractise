@@ -3,7 +3,7 @@
 namespace SOAPPractise.Model.DTO
 {
     [XmlRoot("DeleteDepartmentRequestDto")]
-    public class DeleteDepartmentRequestDto
+    public class GetDepartmentRequestDto
     {
         [XmlElement("Id")]
         public string Id { get; set; }
